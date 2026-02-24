@@ -13,10 +13,10 @@ export default function Welcome() {
       const deepLink = `com.evrydaysolutions.wisdom://login-callback${hash}`;
       setAppLink(deepLink);
 
-      // Automatically try to open the app after 4 seconds
+      // Automatically try to open the app after 5 seconds
       const timer = setTimeout(() => {
         window.location.href = deepLink;
-      }, 4000);
+      }, 5000);
 
       return () => clearTimeout(timer);
     }
@@ -35,11 +35,14 @@ export default function Welcome() {
         transition={{ duration: 0.7, ease: 'easeOut' }}
         className="w-full max-w-md relative z-10 text-center bg-emerald-950/80 backdrop-blur-md rounded-3xl p-8 border border-gold/20 shadow-2xl"
       >
-        <h1 className="font-display text-3xl text-ivory mb-4 tracking-wide">
+        <h1 className="font-display text-3xl text-ivory mb-2 tracking-wide">
           Email Confirmed! 🎉
         </h1>
+        <h2 className="font-display text-xl text-gold mb-4">
+          Welcome to Quran Wisdom
+        </h2>
         <p className="text-ivory/80 text-sm font-light mb-8 leading-relaxed">
-          Welcome to <strong>Quran Wisdom</strong>. Your lifetime free subscription is now active, giving you access to daily wisdom and basic features.
+          Your <strong>21-day trial period</strong> is now active, giving you access to 21 days of wisdom and features.
         </p>
 
         <a 
@@ -49,11 +52,39 @@ export default function Welcome() {
           Open App to Continue
         </a>
 
-        <div className="p-5 bg-emerald-900/50 rounded-2xl border border-ivory/10">
-          <p className="text-gold font-medium mb-2">Ready for more?</p>
-          <p className="text-ivory/60 text-xs leading-relaxed">
-            Upgrade to <strong>Lifetime Premium</strong> for only ₹899 inside the app to unlock the full library and an ad-free experience forever.
+        <div className="p-6 bg-emerald-900/50 rounded-2xl border border-ivory/10 text-left">
+          <p className="text-gold font-medium mb-2 text-center text-lg">Ready for more?</p>
+          <p className="text-ivory/90 text-sm text-center mb-5">
+            Upgrade to <strong>Lifetime Premium</strong> for only ₹899 inside the app to unlock:
           </p>
+          
+          <ul className="text-ivory/70 text-xs space-y-4">
+            <li className="flex items-start gap-3">
+              <span className="text-gold text-sm mt-0.5">✓</span>
+              <span>Daily wisdom for the rest of your life.</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-gold text-sm mt-0.5">✓</span>
+              <span>Access all the previous days' wisdom.</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-gold text-sm mt-0.5">✓</span>
+              <span>Lifetime Free Updates.</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-gold text-sm mt-0.5">✓</span>
+              <span>Ad-Free Experience Forever.</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-gold text-sm mt-0.5">✓</span>
+              <div>
+                <span>Discounts on Bhagavad Gita wisdom, Veda wisdom, Bible wisdom, Upanishad wisdom and more.</span>
+                <span className="block text-gold/70 text-[10px] mt-1 font-medium uppercase tracking-wider">
+                  (Coming Soon)
+                </span>
+              </div>
+            </li>
+          </ul>
         </div>
       </motion.div>
     </div>
