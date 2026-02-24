@@ -13,10 +13,10 @@ export default function Welcome() {
       const deepLink = `com.evrydaysolutions.wisdom://login-callback${hash}`;
       setAppLink(deepLink);
 
-      // Automatically try to open the app after 5 seconds
+      // Automatically try to open the app after 4 seconds
       const timer = setTimeout(() => {
         window.location.href = deepLink;
-      }, 5000);
+      }, 4000);
 
       return () => clearTimeout(timer);
     }
@@ -33,7 +33,7 @@ export default function Welcome() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: 'easeOut' }}
-        className="w-full max-w-md relative z-10 text-center glass rounded-4xl p-8 shadow-2xl"
+        className="w-full max-w-md relative z-10 text-center bg-emerald-950/80 backdrop-blur-md rounded-3xl p-8 border border-gold/20 shadow-2xl"
       >
         <h1 className="font-display text-3xl text-ivory mb-4 tracking-wide">
           Email Confirmed! 🎉
@@ -44,12 +44,12 @@ export default function Welcome() {
 
         <a 
           href={appLink}
-          className="w-full block py-4 bg-emerald-950 text-ivory rounded-3xl font-medium text-sm hover:bg-emerald-800 transition-colors border border-gold/30 shadow-lg mb-8"
+          className="w-full block py-4 bg-emerald-800 text-ivory rounded-2xl font-medium text-sm hover:bg-emerald-700 transition-colors border border-gold/30 shadow-lg mb-8"
         >
           Open App to Continue
         </a>
 
-        <div className="p-5 bg-emerald-950/50 rounded-3xl border border-ivory/10">
+        <div className="p-5 bg-emerald-900/50 rounded-2xl border border-ivory/10">
           <p className="text-gold font-medium mb-2">Ready for more?</p>
           <p className="text-ivory/60 text-xs leading-relaxed">
             Upgrade to <strong>Lifetime Premium</strong> for only ₹899 inside the app to unlock the full library and an ad-free experience forever.
