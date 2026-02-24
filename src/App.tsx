@@ -7,11 +7,11 @@ import AuthForm from './components/AuthForm';
 import DailyWisdom from './components/DailyWisdom';
 import SettingsPanel from './components/SettingsPanel';
 import { WisdomArchive } from './components/WisdomArchive';
-import Welcome from './pages/Welcome';
 import Homepage from './pages/Homepage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import DeleteAccount from './pages/DeleteAccount';
+import Welcome from './pages/Welcome'; // <-- ADDED THE IMPORT HERE
 import { wisdomQ1 } from './data/wisdom-q1';
 import { wisdomQ2 } from './data/wisdom-q2';
 import { wisdomQ3 } from './data/wisdom-q3';
@@ -55,7 +55,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Homepage />} />
-      <Route path="/welcome" element={<Welcome />} />
+      <Route path="/welcome" element={<Welcome />} /> {/* <-- ADDED THE ROUTE HERE */}
       <Route path="/app" element={<AppShell />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
