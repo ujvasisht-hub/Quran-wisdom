@@ -76,6 +76,11 @@ export default function DailyWisdom({ onOpenSettings, onOpenArchive }: Props) {
       .catch(() => {});
   }, [wisdom.searchTerm]);
 
+  const photographerUtmUrl = bgImage
+    ? `${bgImage.photographerUrl}?utm_source=quran_wisdom&utm_medium=referral`
+    : '#';
+  const unsplashUtmUrl = 'https://unsplash.com/?utm_source=quran_wisdom&utm_medium=referral';
+
   return (
     <div className="h-screen flex flex-col relative overflow-hidden">
       <div className="absolute inset-0" style={{ background: gradient }} />
@@ -278,16 +283,18 @@ export default function DailyWisdom({ onOpenSettings, onOpenArchive }: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1, duration: 0.5 }}
-          className="absolute bottom-4 right-5 z-20 pointer-events-none"
+          className="absolute bottom-4 right-5 z-20"
         >
-          <a
-            href={bgImage.photographerUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-ivory/30 text-[10px] hover:text-ivory/50 transition-colors pointer-events-auto"
-          >
-            Photo by {bgImage.photographer} on Unsplash
-          </a>
+          <p className="text-ivory/40 text-[10px]">
+            {"Photo by "}
+            <a href={photographerUtmUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-ivory/60 transition-colors">
+              {bgImage.photographer}
+            </a>
+            {" on "}
+            <a href={unsplashUtmUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-ivory/60 transition-colors">
+              Unsplash
+            </a>
+          </p>
         </motion.div>
       )}
     </div>

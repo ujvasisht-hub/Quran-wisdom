@@ -11,14 +11,12 @@ export function useNotifications() {
 
   const checkPermission = async () => {
     if (!Capacitor.isNativePlatform()) {
-      // On web/browser, use the browser Notification API
       if (typeof Notification !== 'undefined') {
         const perm = Notification.permission;
         setPermission(perm === 'granted' ? 'granted' : perm === 'denied' ? 'denied' : 'default');
       }
       return;
     }
-    // On native Android/iOS
     const result = await LocalNotifications.checkPermissions();
     if (result.display === 'granted') {
       setPermission('granted');
@@ -31,13 +29,11 @@ export function useNotifications() {
 
   const requestPermission = useCallback(async (): Promise<'granted' | 'denied' | 'default'> => {
     if (!Capacitor.isNativePlatform()) {
-      // Web fallback
       if (typeof Notification === 'undefined') return 'denied';
       const result = await Notification.requestPermission();
       setPermission(result === 'granted' ? 'granted' : result === 'denied' ? 'denied' : 'default');
       return result === 'granted' ? 'granted' : result === 'denied' ? 'denied' : 'default';
     }
-    // Native Android/iOS
     const result = await LocalNotifications.requestPermissions();
     const status = result.display === 'granted' ? 'granted' : result.display === 'denied' ? 'denied' : 'default';
     setPermission(status);
@@ -46,7 +42,6 @@ export function useNotifications() {
 
   const scheduleNotification = useCallback(async (timeStr: string): Promise<boolean> => {
     if (!Capacitor.isNativePlatform()) {
-      // Web fallback — use service worker if available
       if (permission !== 'granted') {
         const result = await requestPermission();
         if (result !== 'granted') return false;
@@ -62,7 +57,6 @@ export function useNotifications() {
       return true;
     }
 
-    // Native Android/iOS — cancel any existing scheduled notifications first
     try {
       const pending = await LocalNotifications.getPending();
       if (pending.notifications.length > 0) {
@@ -72,12 +66,10 @@ export function useNotifications() {
 
     const [hour, minute] = timeStr.split(':').map(Number);
 
-    // Schedule the notification for today (or tomorrow if time has passed)
     const now = new Date();
     const scheduled = new Date();
     scheduled.setHours(hour, minute, 0, 0);
 
-    // If the time has already passed today, schedule for tomorrow
     if (scheduled <= now) {
       scheduled.setDate(scheduled.getDate() + 1);
     }
@@ -94,6 +86,8 @@ export function useNotifications() {
               repeats: true,
               every: 'day',
             },
+            smallIcon: 'ic_stat_notify',
+            iconColor: '#d4af37',
             sound: undefined,
             actionTypeId: '',
             extra: null,
