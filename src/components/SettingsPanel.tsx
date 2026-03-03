@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Bell, Clock, Check, AlertCircle, Sparkles, Star } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,30 +20,42 @@ export default function SettingsPanel({ onClose }: Props) {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [legalModal, setLegalModal] = useState<'terms' | 'refund' | null>(null);
 
-  const handleSave = async () => {
-    await updateNotificationTime(time);
+  // Make sure time is always in HH:MM format
+  useEffect(() => {
+    if (profile?.notification_time) {
+      setTime(profile.notification_time);
+    }
+  }, [profile?.notification_time]);
 
+  const handleSave = async () => {
+    setNotifError('');
+
+    // Ensure time is valid
+    if (!time || !time.includes(':')) {
+      setNotifError('Please select a valid time.');
+      return;
+    }
+
+    // Request permission if not already granted
     if (permission !== 'granted') {
       const result = await requestPermission();
       if (result !== 'granted') {
-        setNotifError('Notification permission denied. Please enable in browser settings.');
+        setNotifError('Notification permission denied. Please enable in your phone settings.');
         return;
       }
     }
 
-    setNotifError('');
-    await scheduleNotification(time);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+    // Save time to database
+    await updateNotificationTime(time);
 
-  const handleEnableNotifications = async () => {
-    const result = await requestPermission();
-    if (result === 'granted') {
-      setNotifError('');
-      await scheduleNotification(time);
+    // Schedule the notification
+    const success = await scheduleNotification(time);
+
+    if (success) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     } else {
-      setNotifError('Permission denied. Check your browser notification settings.');
+      setNotifError('Could not schedule notification. Please try again.');
     }
   };
 
@@ -168,21 +180,11 @@ export default function SettingsPanel({ onClose }: Props) {
               </div>
             </div>
 
-            {permission === 'default' && (
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={handleEnableNotifications}
-                className="w-full py-3 bg-gold/20 text-gold rounded-3xl text-sm font-medium mb-4 hover:bg-gold/30 transition-colors"
-              >
-                Enable Notifications
-              </motion.button>
-            )}
-
             {permission === 'denied' && (
               <div className="flex items-start gap-2 bg-red-500/10 rounded-2xl p-3 mb-4">
                 <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
                 <p className="text-red-300 text-xs leading-relaxed">
-                  Notifications are blocked. Please enable them in your browser settings.
+                  Notifications are blocked. Please enable them in your phone Settings → Apps → Quran Wisdom → Notifications.
                 </p>
               </div>
             )}
@@ -193,7 +195,11 @@ export default function SettingsPanel({ onClose }: Props) {
                 <input
                   type="time"
                   value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setTime(e.target.value);
+                    }
+                  }}
                   className="flex-1 bg-ivory/10 text-ivory rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 [color-scheme:dark]"
                 />
               </div>
@@ -216,6 +222,12 @@ export default function SettingsPanel({ onClose }: Props) {
 
             {notifError && (
               <p className="text-red-300 text-xs mt-3">{notifError}</p>
+            )}
+
+            {saved && (
+              <p className="text-emerald-400 text-xs mt-3">
+                ✓ Notification scheduled for {time} daily
+              </p>
             )}
           </motion.div>
 
