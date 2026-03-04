@@ -2,10 +2,23 @@ import { useCallback, useEffect, useState } from 'react';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 
+// Cancel all previously scheduled notifications on app start
+async function cancelAllExisting() {
+  try {
+    const pending = await LocalNotifications.getPending();
+    if (pending.notifications.length > 0) {
+      await LocalNotifications.cancel({ notifications: pending.notifications });
+    }
+  } catch (_) {}
+}
+
 export function useNotifications() {
   const [permission, setPermission] = useState<'granted' | 'denied' | 'default'>('default');
 
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      cancelAllExisting();
+    }
     checkPermission();
   }, []);
 
@@ -57,15 +70,10 @@ export function useNotifications() {
       return true;
     }
 
-    try {
-      const pending = await LocalNotifications.getPending();
-      if (pending.notifications.length > 0) {
-        await LocalNotifications.cancel({ notifications: pending.notifications });
-      }
-    } catch (_) {}
+    // Cancel ALL existing notifications first
+    await cancelAllExisting();
 
     const [hour, minute] = timeStr.split(':').map(Number);
-
     const now = new Date();
     const scheduled = new Date();
     scheduled.setHours(hour, minute, 0, 0);
@@ -78,7 +86,7 @@ export function useNotifications() {
       await LocalNotifications.schedule({
         notifications: [
           {
-            id: 1,
+            id: 1001,
             title: '🕌 Daily Quranic Wisdom',
             body: 'Your verse and reflection for today is ready. Tap to open.',
             schedule: {
