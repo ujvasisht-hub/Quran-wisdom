@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 
-const NOTIFICATION_ID = 2001;
-const STORAGE_KEY = 'notification_time_saved';
+const NOTIFICATION_ID = 3001;
 
 async function cancelAllExisting() {
   try {
@@ -11,6 +11,21 @@ async function cancelAllExisting() {
     if (pending.notifications.length > 0) {
       await LocalNotifications.cancel({ notifications: pending.notifications });
     }
+  } catch (_) {}
+}
+
+async function getSavedTime(): Promise<string | null> {
+  try {
+    const { value } = await Preferences.get({ key: 'notification_time' });
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+async function saveTime(timeStr: string) {
+  try {
+    await Preferences.set({ key: 'notification_time', value: timeStr });
   } catch (_) {}
 }
 
@@ -22,7 +37,6 @@ async function scheduleOnce(timeStr: string) {
   const scheduled = new Date();
   scheduled.setHours(hour, minute, 0, 0);
 
-  // If time already passed today, schedule for tomorrow
   if (scheduled <= now) {
     scheduled.setDate(scheduled.getDate() + 1);
   }
@@ -53,33 +67,39 @@ export function useNotifications() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    checkPermission().then(async (perm) => {
+    (async () => {
+      const perm = await checkPermissionSilent();
       if (perm === 'granted') {
-        // On app open, reschedule for tomorrow if a time was previously saved
-        const savedTime = localStorage.getItem(STORAGE_KEY);
+        const savedTime = await getSavedTime();
         if (savedTime) {
           try {
             await scheduleOnce(savedTime);
           } catch (_) {}
         }
       }
-    });
+    })();
   }, []);
 
-  const checkPermission = async (): Promise<'granted' | 'denied' | 'default'> => {
+  const checkPermissionSilent = async (): Promise<'granted' | 'denied' | 'default'> => {
+    try {
+      const result = await LocalNotifications.checkPermissions();
+      const status = result.display === 'granted' ? 'granted' : result.display === 'denied' ? 'denied' : 'default';
+      setPermission(status);
+      return status;
+    } catch {
+      return 'default';
+    }
+  };
+
+  const checkPermission = async () => {
     if (!Capacitor.isNativePlatform()) {
       if (typeof Notification !== 'undefined') {
         const perm = Notification.permission;
-        const status = perm === 'granted' ? 'granted' : perm === 'denied' ? 'denied' : 'default';
-        setPermission(status);
-        return status;
+        setPermission(perm === 'granted' ? 'granted' : perm === 'denied' ? 'denied' : 'default');
       }
-      return 'default';
+      return;
     }
-    const result = await LocalNotifications.checkPermissions();
-    const status = result.display === 'granted' ? 'granted' : result.display === 'denied' ? 'denied' : 'default';
-    setPermission(status);
-    return status;
+    await checkPermissionSilent();
   };
 
   const requestPermission = useCallback(async (): Promise<'granted' | 'denied' | 'default'> => {
@@ -115,8 +135,7 @@ export function useNotifications() {
 
     try {
       await scheduleOnce(timeStr);
-      // Save the time so app can reschedule on next open
-      localStorage.setItem(STORAGE_KEY, timeStr);
+      await saveTime(timeStr);
       return true;
     } catch (err) {
       console.error('Failed to schedule notification:', err);
@@ -124,5 +143,5 @@ export function useNotifications() {
     }
   }, [permission, requestPermission]);
 
-  return { permission, requestPermission, scheduleNotification };
+  return { permission, requestPermission, scheduleNotification, checkPermission };
 }

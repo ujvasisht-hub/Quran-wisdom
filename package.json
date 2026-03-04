@@ -17,6 +17,7 @@
     "@capacitor/core": "^8.1.0",
     "@capacitor/ios": "^8.1.0",
     "@capacitor/local-notifications": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
     "@supabase/supabase-js": "^2.57.4",
     "framer-motion": "^12.34.3",
     "lucide-react": "^0.344.0",
