@@ -20,35 +20,33 @@ export default function SettingsPanel({ onClose }: Props) {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [legalModal, setLegalModal] = useState<'terms' | 'refund' | null>(null);
 
-  // Make sure time is always in HH:MM format
   useEffect(() => {
     if (profile?.notification_time) {
       setTime(profile.notification_time);
     }
   }, [profile?.notification_time]);
 
+  // DO NOT auto-schedule on load — only schedule when user taps Save
   const handleSave = async () => {
     setNotifError('');
 
-    // Ensure time is valid
     if (!time || !time.includes(':')) {
       setNotifError('Please select a valid time.');
       return;
     }
 
-    // Request permission if not already granted
-    if (permission !== 'granted') {
+    let currentPermission = permission;
+
+    if (currentPermission !== 'granted') {
       const result = await requestPermission();
+      currentPermission = result;
       if (result !== 'granted') {
-        setNotifError('Notification permission denied. Please enable in your phone settings.');
+        setNotifError('Notification permission denied. Please enable in your phone Settings → Apps → Quran Wisdom → Notifications.');
         return;
       }
     }
 
-    // Save time to database
     await updateNotificationTime(time);
-
-    // Schedule the notification
     const success = await scheduleNotification(time);
 
     if (success) {
@@ -61,9 +59,7 @@ export default function SettingsPanel({ onClose }: Props) {
 
   const handleUpgrade = async () => {
     if (processingPayment || !user) return;
-
     setProcessingPayment(true);
-
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -75,15 +71,10 @@ export default function SettingsPanel({ onClose }: Props) {
           Authorization: `Bearer ${anonKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId: user.id,
-          email: user.email,
-        }),
+        body: JSON.stringify({ userId: user.id, email: user.email }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create order');
-      }
+      if (!response.ok) throw new Error('Failed to create order');
 
       const { orderId, amount, currency } = await response.json();
 
@@ -109,7 +100,6 @@ export default function SettingsPanel({ onClose }: Props) {
               razorpaySignature: response.razorpay_signature,
             }),
           });
-
           if (verifyResponse.ok) {
             if (user?.id) {
               await supabase.from('profiles').update({ is_premium: true }).eq('id', user.id);
@@ -122,14 +112,8 @@ export default function SettingsPanel({ onClose }: Props) {
             setProcessingPayment(false);
           }
         },
-        modal: {
-          ondismiss: () => {
-            setProcessingPayment(false);
-          },
-        },
-        theme: {
-          color: '#d4af37',
-        },
+        modal: { ondismiss: () => setProcessingPayment(false) },
+        theme: { color: '#d4af37' },
       };
 
       const rzp = new (window as any).Razorpay(options);
@@ -184,7 +168,7 @@ export default function SettingsPanel({ onClose }: Props) {
               <div className="flex items-start gap-2 bg-red-500/10 rounded-2xl p-3 mb-4">
                 <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
                 <p className="text-red-300 text-xs leading-relaxed">
-                  Notifications are blocked. Please enable them in your phone Settings → Apps → Quran Wisdom → Notifications.
+                  Notifications are blocked. Please enable in Settings → Apps → Quran Wisdom → Notifications.
                 </p>
               </div>
             )}
@@ -195,11 +179,7 @@ export default function SettingsPanel({ onClose }: Props) {
                 <input
                   type="time"
                   value={time}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      setTime(e.target.value);
-                    }
-                  }}
+                  onChange={(e) => { if (e.target.value) setTime(e.target.value); }}
                   className="flex-1 bg-ivory/10 text-ivory rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 [color-scheme:dark]"
                 />
               </div>
@@ -207,16 +187,10 @@ export default function SettingsPanel({ onClose }: Props) {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSave}
                 className={`px-6 py-2.5 rounded-2xl text-sm font-medium transition-all ${
-                  saved
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-ivory text-emerald-900 hover:bg-ivory/90'
+                  saved ? 'bg-emerald-500 text-white' : 'bg-ivory text-emerald-900 hover:bg-ivory/90'
                 }`}
               >
-                {saved ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  'Save'
-                )}
+                {saved ? <Check className="w-4 h-4" /> : 'Save'}
               </motion.button>
             </div>
 
@@ -248,9 +222,7 @@ export default function SettingsPanel({ onClose }: Props) {
                 <span className="text-ivory/70 text-xs">
                   {profile?.created_at
                     ? new Date(profile.created_at).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
+                        month: 'long', day: 'numeric', year: 'numeric',
                       })
                     : '—'}
                 </span>
@@ -300,32 +272,24 @@ export default function SettingsPanel({ onClose }: Props) {
             {!profile?.is_premium && (
               <div className="mt-6 space-y-4">
                 <div className="h-[1px] bg-ivory/10" />
-
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-ivory/70 text-sm font-medium">Lifetime Premium</span>
                     <span className="text-gold text-lg font-bold">₹899</span>
                   </div>
-
                   <div className="space-y-2">
-                    <div className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
-                      <span className="text-ivory/60 text-xs">Every day's verse, forever — past, present & every year ahead</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
-                      <span className="text-ivory/60 text-xs">Daily life-application steps to live the wisdom, not just read it</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
-                      <span className="text-ivory/60 text-xs">A royal, ad-free sanctuary — yours for life</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
-                      <span className="text-ivory/60 text-xs">Pay once, receive guidance every single day, forever</span>
-                    </div>
+                    {[
+                      "Every day's verse, forever — past, present & every year ahead",
+                      "Daily life-application steps to live the wisdom, not just read it",
+                      "A royal, ad-free sanctuary — yours for life",
+                      "Pay once, receive guidance every single day, forever",
+                    ].map((feature, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
+                        <span className="text-ivory/60 text-xs">{feature}</span>
+                      </div>
+                    ))}
                   </div>
-
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={handleUpgrade}
@@ -335,7 +299,6 @@ export default function SettingsPanel({ onClose }: Props) {
                     <Sparkles className="w-4 h-4" />
                     {processingPayment ? 'Processing...' : 'Get Lifetime Access — ₹899'}
                   </motion.button>
-
                   <div className="flex items-center justify-center gap-4 pt-1">
                     <button
                       onClick={() => setLegalModal('terms')}
