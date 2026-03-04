@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 
-// Cancel all previously scheduled notifications on app start
+const NOTIFICATION_ID = 2001;
+const STORAGE_KEY = 'notification_time_saved';
+
 async function cancelAllExisting() {
   try {
     const pending = await LocalNotifications.getPending();
@@ -12,40 +14,81 @@ async function cancelAllExisting() {
   } catch (_) {}
 }
 
+async function scheduleOnce(timeStr: string) {
+  await cancelAllExisting();
+
+  const [hour, minute] = timeStr.split(':').map(Number);
+  const now = new Date();
+  const scheduled = new Date();
+  scheduled.setHours(hour, minute, 0, 0);
+
+  // If time already passed today, schedule for tomorrow
+  if (scheduled <= now) {
+    scheduled.setDate(scheduled.getDate() + 1);
+  }
+
+  await LocalNotifications.schedule({
+    notifications: [
+      {
+        id: NOTIFICATION_ID,
+        title: '🕌 Daily Quranic Wisdom',
+        body: 'Your verse and reflection for today is ready. Tap to open.',
+        schedule: {
+          at: scheduled,
+          repeats: false,
+        },
+        smallIcon: 'ic_stat_notify',
+        iconColor: '#d4af37',
+        sound: undefined,
+        actionTypeId: '',
+        extra: null,
+      },
+    ],
+  });
+}
+
 export function useNotifications() {
   const [permission, setPermission] = useState<'granted' | 'denied' | 'default'>('default');
 
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      cancelAllExisting();
-    }
-    checkPermission();
+    if (!Capacitor.isNativePlatform()) return;
+
+    checkPermission().then(async (perm) => {
+      if (perm === 'granted') {
+        // On app open, reschedule for tomorrow if a time was previously saved
+        const savedTime = localStorage.getItem(STORAGE_KEY);
+        if (savedTime) {
+          try {
+            await scheduleOnce(savedTime);
+          } catch (_) {}
+        }
+      }
+    });
   }, []);
 
-  const checkPermission = async () => {
+  const checkPermission = async (): Promise<'granted' | 'denied' | 'default'> => {
     if (!Capacitor.isNativePlatform()) {
       if (typeof Notification !== 'undefined') {
         const perm = Notification.permission;
-        setPermission(perm === 'granted' ? 'granted' : perm === 'denied' ? 'denied' : 'default');
+        const status = perm === 'granted' ? 'granted' : perm === 'denied' ? 'denied' : 'default';
+        setPermission(status);
+        return status;
       }
-      return;
+      return 'default';
     }
     const result = await LocalNotifications.checkPermissions();
-    if (result.display === 'granted') {
-      setPermission('granted');
-    } else if (result.display === 'denied') {
-      setPermission('denied');
-    } else {
-      setPermission('default');
-    }
+    const status = result.display === 'granted' ? 'granted' : result.display === 'denied' ? 'denied' : 'default';
+    setPermission(status);
+    return status;
   };
 
   const requestPermission = useCallback(async (): Promise<'granted' | 'denied' | 'default'> => {
     if (!Capacitor.isNativePlatform()) {
       if (typeof Notification === 'undefined') return 'denied';
       const result = await Notification.requestPermission();
-      setPermission(result === 'granted' ? 'granted' : result === 'denied' ? 'denied' : 'default');
-      return result === 'granted' ? 'granted' : result === 'denied' ? 'denied' : 'default';
+      const status = result === 'granted' ? 'granted' : result === 'denied' ? 'denied' : 'default';
+      setPermission(status);
+      return status;
     }
     const result = await LocalNotifications.requestPermissions();
     const status = result.display === 'granted' ? 'granted' : result.display === 'denied' ? 'denied' : 'default';
@@ -70,38 +113,10 @@ export function useNotifications() {
       return true;
     }
 
-    // Cancel ALL existing notifications first
-    await cancelAllExisting();
-
-    const [hour, minute] = timeStr.split(':').map(Number);
-    const now = new Date();
-    const scheduled = new Date();
-    scheduled.setHours(hour, minute, 0, 0);
-
-    if (scheduled <= now) {
-      scheduled.setDate(scheduled.getDate() + 1);
-    }
-
     try {
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            id: 1001,
-            title: '🕌 Daily Quranic Wisdom',
-            body: 'Your verse and reflection for today is ready. Tap to open.',
-            schedule: {
-              at: scheduled,
-              repeats: true,
-              every: 'day',
-            },
-            smallIcon: 'ic_stat_notify',
-            iconColor: '#d4af37',
-            sound: undefined,
-            actionTypeId: '',
-            extra: null,
-          },
-        ],
-      });
+      await scheduleOnce(timeStr);
+      // Save the time so app can reschedule on next open
+      localStorage.setItem(STORAGE_KEY, timeStr);
       return true;
     } catch (err) {
       console.error('Failed to schedule notification:', err);
