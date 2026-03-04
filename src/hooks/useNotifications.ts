@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
+import { Capacitor } from '@capacitor/core';
 
-const NOTIFICATION_ID = 3001;
+const NOTIFICATION_ID = 4001;
 
 async function cancelAllExisting() {
   try {
@@ -29,55 +29,12 @@ async function saveTime(timeStr: string) {
   } catch (_) {}
 }
 
-async function scheduleOnce(timeStr: string) {
-  await cancelAllExisting();
-
-  const [hour, minute] = timeStr.split(':').map(Number);
-  const now = new Date();
-  const scheduled = new Date();
-  scheduled.setHours(hour, minute, 0, 0);
-
-  if (scheduled <= now) {
-    scheduled.setDate(scheduled.getDate() + 1);
-  }
-
-  await LocalNotifications.schedule({
-    notifications: [
-      {
-        id: NOTIFICATION_ID,
-        title: '🕌 Daily Quranic Wisdom',
-        body: 'Your verse and reflection for today is ready. Tap to open.',
-        schedule: {
-          at: scheduled,
-          repeats: false,
-        },
-        smallIcon: 'ic_stat_notify',
-        iconColor: '#d4af37',
-        sound: undefined,
-        actionTypeId: '',
-        extra: null,
-      },
-    ],
-  });
-}
-
 export function useNotifications() {
   const [permission, setPermission] = useState<'granted' | 'denied' | 'default'>('default');
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-
-    (async () => {
-      const perm = await checkPermissionSilent();
-      if (perm === 'granted') {
-        const savedTime = await getSavedTime();
-        if (savedTime) {
-          try {
-            await scheduleOnce(savedTime);
-          } catch (_) {}
-        }
-      }
-    })();
+    checkPermissionSilent();
   }, []);
 
   const checkPermissionSilent = async (): Promise<'granted' | 'denied' | 'default'> => {
@@ -89,17 +46,6 @@ export function useNotifications() {
     } catch {
       return 'default';
     }
-  };
-
-  const checkPermission = async () => {
-    if (!Capacitor.isNativePlatform()) {
-      if (typeof Notification !== 'undefined') {
-        const perm = Notification.permission;
-        setPermission(perm === 'granted' ? 'granted' : perm === 'denied' ? 'denied' : 'default');
-      }
-      return;
-    }
-    await checkPermissionSilent();
   };
 
   const requestPermission = useCallback(async (): Promise<'granted' | 'denied' | 'default'> => {
@@ -134,7 +80,34 @@ export function useNotifications() {
     }
 
     try {
-      await scheduleOnce(timeStr);
+      // Cancel everything first
+      await cancelAllExisting();
+
+      const [hour, minute] = timeStr.split(':').map(Number);
+
+      // Schedule using exact hour and minute repeat
+      // This uses Android's AlarmManager which works even when app is closed
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: NOTIFICATION_ID,
+            title: '🕌 Daily Quranic Wisdom',
+            body: 'Your verse and reflection for today is ready. Tap to open.',
+            schedule: {
+              on: {
+                hour: hour,
+                minute: minute,
+              },
+            },
+            smallIcon: 'ic_stat_notify',
+            iconColor: '#d4af37',
+            sound: undefined,
+            actionTypeId: '',
+            extra: null,
+          },
+        ],
+      });
+
       await saveTime(timeStr);
       return true;
     } catch (err) {
@@ -143,5 +116,5 @@ export function useNotifications() {
     }
   }, [permission, requestPermission]);
 
-  return { permission, requestPermission, scheduleNotification, checkPermission };
+  return { permission, requestPermission, scheduleNotification };
 }
